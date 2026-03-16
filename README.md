@@ -72,6 +72,26 @@ Join our Discord for support, feedback, and updates: [Discord Server](https://di
 
 ## how to install and run
 
+### Web interface (this fork)
+
+This fork includes a web interface that keeps the same scraping sources and lets you watch in-browser and download episodes.
+
+```bash
+go run ./cmd/goanime-web
+```
+
+Then open:
+
+```text
+http://localhost:8080
+```
+
+You can change the listen address with `GOANIME_WEB_ADDR`, for example:
+
+```bash
+GOANIME_WEB_ADDR=":9090" go run ./cmd/goanime-web
+```
+
 ### Universal install (Only needs go installed and recommended for most users)  
 
 ```shell

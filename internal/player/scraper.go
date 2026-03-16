@@ -279,7 +279,26 @@ func GetVideoURLForEpisode(episodeURL string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return extractActualVideoURL(videoURL)
+	return extractActualVideoURLWithOptions(videoURL, util.GlobalQuality, true)
+}
+
+// GetVideoURLForEpisodeWithQuality resolves the episode URL without interactive prompts.
+// It is designed for web/API contexts where quality comes from request parameters.
+func GetVideoURLForEpisodeWithQuality(episodeURL, preferredQuality string) (string, error) {
+	if len(episodeURL) < 30 && !strings.Contains(episodeURL, "http") {
+		return "", fmt.Errorf("GetVideoURLForEpisodeWithQuality called with non-URL value '%s'", episodeURL)
+	}
+
+	videoURL, err := extractVideoURL(episodeURL)
+	if err != nil {
+		return "", err
+	}
+
+	if strings.TrimSpace(preferredQuality) == "" {
+		preferredQuality = "best"
+	}
+
+	return extractActualVideoURLWithOptions(videoURL, preferredQuality, false)
 }
 
 // GetVideoURLForEpisodeEnhanced gets the video URL using the enhanced API with AllAnime navigation support
@@ -552,6 +571,10 @@ func findBloggerLink(content string) (string, error) {
 
 // extractActualVideoURL processes the video source and allows the user to select quality
 func extractActualVideoURL(videoSrc string) (string, error) {
+	return extractActualVideoURLWithOptions(videoSrc, util.GlobalQuality, true)
+}
+
+func extractActualVideoURLWithOptions(videoSrc, preferredQuality string, interactive bool) (string, error) {
 	if util.IsDebug {
 		util.Debugf("Processing video source: %s", videoSrc)
 	}
@@ -599,13 +622,20 @@ func extractActualVideoURL(videoSrc string) (string, error) {
 				return videoResponse.Data[0].Src, nil
 			}
 
-			// Use global quality preference only if it's a specific quality (not "best")
-			if util.GlobalQuality != "" && util.GlobalQuality != "best" {
-				selectedSrc := selectQualityFromOptions(videoResponse.Data, util.GlobalQuality)
+			// Non-interactive paths (web/api) and explicit quality preferences should never prompt.
+			if strings.TrimSpace(preferredQuality) != "" {
+				selectedSrc := selectQualityFromOptions(videoResponse.Data, preferredQuality)
 				if selectedSrc != "" {
 					if util.IsDebug {
-						util.Debugf("Using global quality preference: %s -> %s", util.GlobalQuality, selectedSrc)
+						util.Debugf("Using quality preference: %s -> %s", preferredQuality, selectedSrc)
 					}
+					return selectedSrc, nil
+				}
+			}
+
+			if !interactive {
+				selectedSrc := selectQualityFromOptions(videoResponse.Data, "best")
+				if selectedSrc != "" {
 					return selectedSrc, nil
 				}
 			}

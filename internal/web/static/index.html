@@ -1,0 +1,599 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GoAnime Web</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <style>
+    :root {
+      --bg: #08151a;
+      --bg-soft: #0f242b;
+      --card: #13333d;
+      --ink: #f2f7f4;
+      --muted: #b8cec7;
+      --accent: #ffa63f;
+      --accent-2: #4ad9ca;
+      --danger: #ff6a5f;
+      --ok: #4cd46b;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 10% 10%, #174654 0, transparent 45%),
+        radial-gradient(circle at 90% 20%, #4a3018 0, transparent 40%),
+        radial-gradient(circle at 50% 95%, #0a6c62 0, transparent 35%),
+        var(--bg);
+      font-family: "IBM Plex Sans", sans-serif;
+      min-height: 100vh;
+    }
+
+    .shell {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px 16px 48px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .brand {
+      font-family: "Space Grotesk", sans-serif;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      font-size: 1.3rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 99px;
+      background: linear-gradient(120deg, var(--accent), var(--accent-2));
+      box-shadow: 0 0 18px rgba(255, 166, 63, 0.6);
+      animation: pulse 2.1s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.35); opacity: 0.6; }
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 430px 1fr;
+      gap: 18px;
+    }
+
+    .panel {
+      background: linear-gradient(180deg, rgba(19, 51, 61, 0.95), rgba(15, 35, 42, 0.96));
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 14px;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.32);
+      backdrop-filter: blur(6px);
+    }
+
+    .controls {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    input, select, button {
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 10px;
+      font: inherit;
+      color: var(--ink);
+      background: rgba(8, 22, 29, 0.9);
+      padding: 10px 12px;
+    }
+
+    button {
+      cursor: pointer;
+      transition: transform 0.15s ease, background 0.2s ease;
+      background: linear-gradient(130deg, #ff9f38, #f26a3d);
+      color: #131313;
+      border: 0;
+      font-weight: 600;
+    }
+
+    button:hover { transform: translateY(-1px); }
+    button.secondary {
+      background: linear-gradient(120deg, #64d9d2, #2baea2);
+      color: #062323;
+    }
+
+    .result-list, .episode-list {
+      display: grid;
+      gap: 8px;
+      max-height: 62vh;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .item {
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 9px;
+      background: rgba(6, 17, 22, 0.8);
+      color: var(--ink);
+      cursor: pointer;
+      transition: border-color .2s ease, transform .15s ease;
+      display: grid;
+      gap: 4px;
+    }
+
+    .item:hover { transform: translateY(-1px); border-color: rgba(255, 166, 63, 0.65); }
+    .item.active { border-color: var(--accent-2); }
+
+    .title {
+      font-weight: 700;
+      font-size: .98rem;
+      color: #f4fbf8;
+      line-height: 1.25;
+      text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+    }
+    .meta { font-size: .82rem; color: var(--muted); }
+
+    .viewer {
+      display: grid;
+      gap: 12px;
+    }
+
+    .video-wrap {
+      position: relative;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: #05090b;
+      min-height: 320px;
+    }
+
+    video {
+      width: 100%;
+      min-height: 320px;
+      background: #000;
+      display: block;
+    }
+
+    .info {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      color: var(--muted);
+      font-size: .9rem;
+    }
+
+    .chip {
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 999px;
+      padding: 4px 10px;
+      background: rgba(9, 22, 27, 0.84);
+    }
+
+    .status {
+      font-size: .9rem;
+      min-height: 22px;
+      color: var(--muted);
+      animation: reveal .24s ease;
+    }
+
+    .status.error { color: var(--danger); }
+    .status.ok { color: var(--ok); }
+
+    @keyframes reveal {
+      from { opacity: 0; transform: translateY(-3px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .player-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .grow { flex: 1; min-width: 120px; }
+
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      background: rgba(4, 12, 15, 0.62);
+      backdrop-filter: blur(2px);
+    }
+
+    .loading-overlay.active {
+      display: flex;
+      animation: reveal .18s ease;
+    }
+
+    .loading-box {
+      min-width: 280px;
+      max-width: 86vw;
+      text-align: center;
+      padding: 16px 18px;
+      border-radius: 14px;
+      border: 1px solid rgba(74, 217, 202, 0.45);
+      background: linear-gradient(180deg, rgba(8, 31, 37, 0.96), rgba(7, 21, 26, 0.96));
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+      color: #ebfff7;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      font-size: 1rem;
+    }
+
+    #searchBtn:disabled {
+      opacity: 0.58;
+      cursor: not-allowed;
+      transform: none;
+      filter: saturate(0.55);
+    }
+
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+      .result-list { max-height: 38vh; }
+      .episode-list { max-height: 30vh; }
+      .video-wrap, video { min-height: 240px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="topbar">
+      <div class="brand"><span class="dot"></span> GoAnime Web</div>
+      <div class="meta">Search, watch, and download from current sources</div>
+    </div>
+
+    <div class="layout">
+      <section class="panel">
+        <div class="controls">
+          <input id="searchInput" type="text" placeholder="Search anime, movie, TV..." />
+          <select id="sourceSelect" title="Optional filter (default: all sources)">
+            <option value="all">All sources (recommended)</option>
+            <option value="anime">Anime only</option>
+            <option value="movie">Movies only</option>
+            <option value="tv">TV shows only</option>
+            <option value="allanime">Only AllAnime</option>
+            <option value="animefire">Only AnimeFire</option>
+            <option value="flixhq">Only FlixHQ</option>
+          </select>
+          <button id="searchBtn">Search</button>
+        </div>
+
+        <div id="resultList" class="result-list"></div>
+      </section>
+
+      <section class="panel viewer">
+        <div class="player-actions">
+          <select id="seasonSelect" class="grow"></select>
+          <select id="episodeSelect" class="grow"></select>
+          <select id="qualitySelect" class="grow">
+            <option value="best">Best</option>
+            <option value="1080">1080p</option>
+            <option value="720">720p</option>
+            <option value="480">480p</option>
+            <option value="worst">Worst</option>
+          </select>
+          <button id="playBtn" class="secondary">Play</button>
+          <button id="downloadBtn">Download</button>
+        </div>
+
+        <div class="video-wrap">
+          <video id="player" controls playsinline></video>
+        </div>
+
+        <div class="info">
+          <span id="currentName" class="chip">No media selected</span>
+          <span id="currentMeta" class="chip">Select an item to load episodes</span>
+        </div>
+
+        <div id="episodeList" class="episode-list"></div>
+        <div id="status" class="status"></div>
+      </section>
+    </div>
+  </div>
+
+  <div id="loadingOverlay" class="loading-overlay" aria-live="polite" aria-busy="false">
+    <div id="loadingMessage" class="loading-box">Searching sources...</div>
+  </div>
+
+  <script>
+    const state = {
+      selectedMediaId: null,
+      selectedMedia: null,
+      episodes: [],
+      selectedEpisode: 1,
+      selectedSeason: 1,
+      hls: null,
+    };
+
+    const refs = {
+      input: document.getElementById('searchInput'),
+      source: document.getElementById('sourceSelect'),
+      search: document.getElementById('searchBtn'),
+      resultList: document.getElementById('resultList'),
+      seasonSelect: document.getElementById('seasonSelect'),
+      episodeSelect: document.getElementById('episodeSelect'),
+      quality: document.getElementById('qualitySelect'),
+      play: document.getElementById('playBtn'),
+      download: document.getElementById('downloadBtn'),
+      episodeList: document.getElementById('episodeList'),
+      player: document.getElementById('player'),
+      status: document.getElementById('status'),
+      currentName: document.getElementById('currentName'),
+      currentMeta: document.getElementById('currentMeta'),
+      loadingOverlay: document.getElementById('loadingOverlay'),
+      loadingMessage: document.getElementById('loadingMessage'),
+    };
+
+    function setStatus(text, type = '') {
+      refs.status.className = `status ${type}`.trim();
+      refs.status.textContent = text || '';
+    }
+
+    function setSearchLoading(active, message = 'Searching sources...') {
+      refs.search.disabled = !!active;
+      refs.search.textContent = active ? 'Searching...' : 'Search';
+
+      refs.loadingMessage.textContent = message;
+      refs.loadingOverlay.classList.toggle('active', !!active);
+      refs.loadingOverlay.setAttribute('aria-busy', active ? 'true' : 'false');
+    }
+
+    function resetPlayerAndSelection() {
+      if (state.hls) {
+        state.hls.destroy();
+        state.hls = null;
+      }
+
+      refs.player.pause();
+      refs.player.removeAttribute('src');
+      refs.player.load();
+
+      state.selectedMediaId = null;
+      state.selectedMedia = null;
+      state.episodes = [];
+      state.selectedEpisode = 1;
+      state.selectedSeason = 1;
+
+      refs.currentName.textContent = 'No media selected';
+      refs.currentMeta.textContent = 'Select an item to load episodes';
+      refs.episodeList.innerHTML = '';
+      refs.episodeSelect.innerHTML = '';
+      refs.seasonSelect.innerHTML = '';
+    }
+
+    function sourceLabel(m) {
+      const type = m.media_type ? ` - ${m.media_type}` : '';
+      const lang = m.language && m.language !== 'Unknown' ? `[${m.language}] ` : '';
+      return `${lang}${m.source || 'Unknown'}${type}${m.year ? ` (${m.year})` : ''}`;
+    }
+
+    async function doSearch() {
+      const q = refs.input.value.trim();
+      if (q.length < 2) {
+        setStatus('Type at least 2 characters to search.', 'error');
+        return;
+      }
+
+      resetPlayerAndSelection();
+      setStatus('Searching sources...');
+      setSearchLoading(true, 'Searching sources...');
+      refs.resultList.innerHTML = '';
+
+      try {
+        const src = refs.source.value;
+        const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&source=${encodeURIComponent(src)}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'search failed');
+
+        if (!data.items || data.items.length === 0) {
+          setStatus('No results found.', 'error');
+          return;
+        }
+
+        for (const item of data.items) {
+          const card = document.createElement('button');
+          card.className = 'item';
+          const animeName = (item.anime_name || item.name || 'Untitled media').trim();
+          card.innerHTML = `<div class="title">${animeName}</div><div class="meta">${sourceLabel(item)}</div>`;
+          card.onclick = () => selectMedia(item, card);
+          refs.resultList.appendChild(card);
+        }
+
+        setStatus(`Found ${data.items.length} result(s).`, 'ok');
+      } catch (err) {
+        setStatus(`Search error: ${err.message}`, 'error');
+      } finally {
+        setSearchLoading(false);
+      }
+    }
+
+    async function selectMedia(item, cardEl) {
+      if (state.hls) {
+        state.hls.destroy();
+        state.hls = null;
+      }
+      refs.player.pause();
+      refs.player.removeAttribute('src');
+      refs.player.load();
+
+      state.selectedMediaId = item.id;
+      state.selectedMedia = item;
+      refs.currentName.textContent = (item.anime_name || item.name || 'Untitled media').trim();
+      refs.currentMeta.textContent = sourceLabel(item);
+
+      Array.from(refs.resultList.children).forEach(el => el.classList.remove('active'));
+      cardEl.classList.add('active');
+
+      await loadEpisodes();
+    }
+
+    async function loadEpisodes() {
+      if (!state.selectedMediaId) return;
+
+      setStatus('Loading episodes...');
+      refs.episodeList.innerHTML = '';
+      refs.episodeSelect.innerHTML = '';
+
+      try {
+        const season = Number(refs.seasonSelect.value || 1);
+        const res = await fetch(`/api/media/${state.selectedMediaId}/episodes?season=${season}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'failed to load episodes');
+
+        state.episodes = data.episodes || [];
+
+        refs.seasonSelect.innerHTML = '';
+        if (Array.isArray(data.seasons) && data.seasons.length > 0) {
+          for (const s of data.seasons) {
+            const opt = document.createElement('option');
+            opt.value = s.number;
+            opt.textContent = s.title || `Season ${s.number}`;
+            refs.seasonSelect.appendChild(opt);
+          }
+          refs.seasonSelect.value = data.selected_season || 1;
+          refs.seasonSelect.disabled = false;
+        } else {
+          const opt = document.createElement('option');
+          opt.value = '1';
+          opt.textContent = 'Single season';
+          refs.seasonSelect.appendChild(opt);
+          refs.seasonSelect.disabled = true;
+        }
+
+        if (state.episodes.length === 0) {
+          setStatus('No episodes found for this media.', 'error');
+          return;
+        }
+
+        for (const ep of state.episodes) {
+          const epBtn = document.createElement('button');
+          epBtn.className = 'item';
+          epBtn.innerHTML = `<div class="title">Episode ${ep.number}</div><div class="meta">${ep.label}</div>`;
+          epBtn.onclick = () => {
+            state.selectedEpisode = ep.number;
+            refs.episodeSelect.value = String(ep.number);
+            highlightEpisode(ep.number);
+          };
+          refs.episodeList.appendChild(epBtn);
+
+          const opt = document.createElement('option');
+          opt.value = ep.number;
+          opt.textContent = `Episode ${ep.number}`;
+          refs.episodeSelect.appendChild(opt);
+        }
+
+        state.selectedEpisode = state.episodes[0].number;
+        refs.episodeSelect.value = String(state.selectedEpisode);
+        highlightEpisode(state.selectedEpisode);
+        setStatus(`Loaded ${state.episodes.length} episode(s).`, 'ok');
+      } catch (err) {
+        setStatus(`Episodes error: ${err.message}`, 'error');
+      }
+    }
+
+    function highlightEpisode(number) {
+      const nodes = Array.from(refs.episodeList.children);
+      nodes.forEach((el, idx) => {
+        const ep = state.episodes[idx];
+        if (!ep) return;
+        el.classList.toggle('active', Number(ep.number) === Number(number));
+      });
+    }
+
+    function applyPlayerURL(url) {
+      if (state.hls) {
+        state.hls.destroy();
+        state.hls = null;
+      }
+
+      const video = refs.player;
+      const isM3U8 = url.includes('.m3u8') || url.includes('mpegurl');
+
+      if (isM3U8 && window.Hls && Hls.isSupported()) {
+        state.hls = new Hls();
+        state.hls.loadSource(url);
+        state.hls.attachMedia(video);
+      } else {
+        video.src = url;
+      }
+    }
+
+    async function playSelected() {
+      if (!state.selectedMediaId) {
+        setStatus('Select a media item first.', 'error');
+        return;
+      }
+
+      state.selectedEpisode = Number(refs.episodeSelect.value || state.selectedEpisode || 1);
+      const season = Number(refs.seasonSelect.value || 1);
+      const quality = refs.quality.value;
+
+      setStatus('Resolving stream URL...');
+      try {
+        const url = `/api/media/${state.selectedMediaId}/stream?episode=${state.selectedEpisode}&season=${season}&quality=${encodeURIComponent(quality)}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'failed to resolve stream');
+
+        applyPlayerURL(data.proxy_url || data.stream_url);
+
+        const video = refs.player;
+        await video.play().catch(() => undefined);
+        setStatus(`Playing episode ${state.selectedEpisode}.`, 'ok');
+      } catch (err) {
+        setStatus(`Play error: ${err.message}`, 'error');
+      }
+    }
+
+    function downloadSelected() {
+      if (!state.selectedMediaId) {
+        setStatus('Select a media item first.', 'error');
+        return;
+      }
+
+      state.selectedEpisode = Number(refs.episodeSelect.value || state.selectedEpisode || 1);
+      const season = Number(refs.seasonSelect.value || 1);
+      const quality = refs.quality.value;
+      const url = `/api/media/${state.selectedMediaId}/download?episode=${state.selectedEpisode}&season=${season}&quality=${encodeURIComponent(quality)}`;
+      window.open(url, '_blank');
+      setStatus(`Download started for episode ${state.selectedEpisode}.`, 'ok');
+    }
+
+    refs.search.addEventListener('click', doSearch);
+    refs.input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') doSearch();
+    });
+
+    refs.seasonSelect.addEventListener('change', loadEpisodes);
+    refs.episodeSelect.addEventListener('change', () => {
+      state.selectedEpisode = Number(refs.episodeSelect.value || 1);
+      highlightEpisode(state.selectedEpisode);
+    });
+
+    refs.play.addEventListener('click', playSelected);
+    refs.download.addEventListener('click', downloadSelected);
+  </script>
+</body>
+</html>
