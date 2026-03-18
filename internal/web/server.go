@@ -58,6 +58,19 @@ type Server struct {
 	mediaManager *scraper.MediaManager
 }
 
+type mediaItem struct {
+	ID        string `json:"id"`
+	AnimeName string `json:"anime_name"`
+	Name      string `json:"name"`
+	Source    string `json:"source"`
+	ImageURL  string `json:"image_url"`
+	MediaType string `json:"media_type"`
+	Year      string `json:"year"`
+	Language  string `json:"language"`
+	MediaURL  string `json:"media_url"`
+	IMDBID    string `json:"imdb_id"`
+}
+
 // NewServer creates a new web server instance.
 func NewServer() *Server {
 	s := &Server{
@@ -77,6 +90,7 @@ func (s *Server) Start(addr string) error {
 func (s *Server) routes() {
 	s.mux.HandleFunc("/", s.handleIndex)
 	s.mux.HandleFunc("/api/search", s.handleSearch)
+	s.mux.HandleFunc("/api/media/resolve", s.handleMediaResolve)
 	s.mux.HandleFunc("/api/media/", s.handleMediaRoutes)
 	s.mux.HandleFunc("/api/proxy", s.handleProxy)
 }
@@ -117,38 +131,67 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	type item struct {
-		ID        string `json:"id"`
-		AnimeName string `json:"anime_name"`
-		Name      string `json:"name"`
-		Source    string `json:"source"`
-		ImageURL  string `json:"image_url"`
-		MediaType string `json:"media_type"`
-		Year      string `json:"year"`
-		Language  string `json:"language"`
-	}
-
-	items := make([]item, 0, len(results))
+	items := make([]mediaItem, 0, len(results))
 	for _, media := range results {
-		id := s.store.putMedia(media)
-		mediaType := string(media.MediaType)
-		if mediaType == "" {
-			mediaType = string(models.MediaTypeAnime)
-		}
-		items = append(items, item{
-			ID:        id,
-			AnimeName: buildAnimeDisplayName(media.Name, media.URL),
-			Name:      media.Name,
-			Source:    media.Source,
-			ImageURL:  media.ImageURL,
-			MediaType: mediaType,
-			Year:      media.Year,
-			Language:  inferLanguageTag(media.Name),
-		})
+		items = append(items, s.toMediaItem(media))
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"items": items,
+	})
+}
+
+func (s *Server) toMediaItem(media *models.Anime) mediaItem {
+	id := s.store.putMedia(media)
+	mediaType := string(media.MediaType)
+	if mediaType == "" {
+		mediaType = string(models.MediaTypeAnime)
+	}
+
+	return mediaItem{
+		ID:        id,
+		AnimeName: buildAnimeDisplayName(media.Name, media.URL),
+		Name:      media.Name,
+		Source:    media.Source,
+		ImageURL:  media.ImageURL,
+		MediaType: mediaType,
+		Year:      media.Year,
+		Language:  inferLanguageTag(media.Name),
+		MediaURL:  media.URL,
+		IMDBID:    media.IMDBID,
+	}
+}
+
+func (s *Server) handleMediaResolve(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeErr(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	mediaURL := strings.TrimSpace(r.URL.Query().Get("media_url"))
+	if mediaURL == "" {
+		writeErr(w, http.StatusBadRequest, "media_url is required")
+		return
+	}
+
+	mediaType := strings.TrimSpace(r.URL.Query().Get("media_type"))
+	if mediaType == "" {
+		mediaType = string(models.MediaTypeAnime)
+	}
+
+	media := &models.Anime{
+		Name:      strings.TrimSpace(r.URL.Query().Get("name")),
+		URL:       mediaURL,
+		Source:    strings.TrimSpace(r.URL.Query().Get("source")),
+		ImageURL:  strings.TrimSpace(r.URL.Query().Get("image_url")),
+		MediaType: models.MediaType(mediaType),
+		Year:      strings.TrimSpace(r.URL.Query().Get("year")),
+		IMDBID:    strings.TrimSpace(r.URL.Query().Get("imdb_id")),
+	}
+
+	item := s.toMediaItem(media)
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"item": item,
 	})
 }
 
@@ -260,9 +303,9 @@ func (s *Server) handleEpisodes(w http.ResponseWriter, r *http.Request, media *m
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"seasons":        seasons,
+		"seasons":         seasons,
 		"selected_season": selectedSeason,
-		"episodes":       episodeItems,
+		"episodes":        episodeItems,
 	})
 }
 
@@ -279,7 +322,7 @@ func (s *Server) handleStream(w http.ResponseWriter, r *http.Request, media *mod
 		quality = "best"
 	}
 
-	streamURL, subtitles, err := s.resolveStream(media, season, episodeNum, quality)
+	streamURL, subtitles, isEmbedOnly, err := s.resolveStream(media, season, episodeNum, quality)
 	if err != nil {
 		writeErr(w, http.StatusBadGateway, err.Error())
 		return
@@ -300,9 +343,15 @@ func (s *Server) handleStream(w http.ResponseWriter, r *http.Request, media *mod
 		})
 	}
 
+	proxyURL := "/api/proxy?target=" + url.QueryEscape(streamURL)
+	if isEmbedOnly {
+		proxyURL = ""
+	}
+
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"stream_url": streamURL,
-		"proxy_url":  "/api/proxy?target=" + url.QueryEscape(streamURL),
+		"proxy_url":  proxyURL,
+		"is_embed":   isEmbedOnly,
 		"subtitles":  subs,
 	})
 }
@@ -320,9 +369,14 @@ func (s *Server) handleDownload(w http.ResponseWriter, r *http.Request, media *m
 		quality = "best"
 	}
 
-	streamURL, _, err := s.resolveStream(media, season, episodeNum, quality)
+	streamURL, _, isEmbedOnly, err := s.resolveStream(media, season, episodeNum, quality)
 	if err != nil {
 		writeErr(w, http.StatusBadGateway, err.Error())
+		return
+	}
+
+	if isEmbedOnly {
+		writeErr(w, http.StatusBadRequest, "download is not supported for embed-only sources")
 		return
 	}
 
@@ -331,20 +385,20 @@ func (s *Server) handleDownload(w http.ResponseWriter, r *http.Request, media *m
 	http.Redirect(w, r, proxy, http.StatusFound)
 }
 
-func (s *Server) resolveStream(media *models.Anime, season, episodeNum int, quality string) (string, []models.Subtitle, error) {
+func (s *Server) resolveStream(media *models.Anime, season, episodeNum int, quality string) (string, []models.Subtitle, bool, error) {
 	episodes, _, _, err := s.getEpisodesForMedia(media, season)
 	if err != nil {
-		return "", nil, err
+		return "", nil, false, err
 	}
 
 	ep, err := findEpisode(episodes, episodeNum)
 	if err != nil {
-		return "", nil, err
+		return "", nil, false, err
 	}
 
-	if media.Source == "FlixHQ" || media.MediaType == models.MediaTypeMovie || media.MediaType == models.MediaTypeTV {
+	if isFlixHQMedia(media) {
 		url, subtitles, err := api.GetFlixHQStreamURL(media, &ep, quality)
-		return url, subtitles, err
+		return url, subtitles, false, err
 	}
 
 	// AnimeFire stream extraction in enhanced adapter is still incomplete in this codebase.
@@ -352,11 +406,11 @@ func (s *Server) resolveStream(media *models.Anime, season, episodeNum int, qual
 	if strings.Contains(strings.ToLower(media.Source), "animefire") || strings.Contains(strings.ToLower(ep.URL), "animefire") {
 		episodeURL := ensureAbsoluteEpisodeURL(media.URL, ep.URL)
 		url, err := player.GetVideoURLForEpisodeWithQuality(episodeURL, quality)
-		return url, nil, err
+		return url, nil, false, err
 	}
 
 	url, err := api.GetEpisodeStreamURLEnhanced(&ep, media, quality)
-	return url, nil, err
+	return url, nil, false, err
 }
 
 func findEpisode(episodes []models.Episode, episodeNum int) (models.Episode, error) {
@@ -378,7 +432,7 @@ func findEpisode(episodes []models.Episode, episodeNum int) (models.Episode, err
 }
 
 func (s *Server) getEpisodesForMedia(media *models.Anime, season int) ([]models.Episode, []map[string]interface{}, int, error) {
-	if media.Source == "FlixHQ" || media.MediaType == models.MediaTypeMovie || media.MediaType == models.MediaTypeTV {
+	if isFlixHQMedia(media) {
 		flix := s.mediaManager.GetFlixHQClient()
 		mediaID := extractFlixHQMediaID(media.URL)
 		if mediaID == "" {
@@ -533,6 +587,16 @@ func extractFlixHQMediaID(raw string) string {
 	}
 	return id
 }
+
+func isFlixHQMedia(media *models.Anime) bool {
+	if media == nil {
+		return false
+	}
+
+	source := strings.ToLower(strings.TrimSpace(media.Source))
+	return source == "flixhq"
+}
+
 
 func (s *Server) handleProxy(w http.ResponseWriter, r *http.Request) {
 	target := strings.TrimSpace(r.URL.Query().Get("target"))

@@ -126,6 +126,175 @@
       padding-right: 4px;
     }
 
+    .list-heading {
+      font-family: "Space Grotesk", sans-serif;
+      font-size: .88rem;
+      font-weight: 700;
+      letter-spacing: .02em;
+      margin: 10px 2px 8px;
+      color: #d6ece4;
+    }
+
+    .library-radio {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+      min-height: 320px;
+    }
+
+    .library-panel {
+      flex: 1 1 0;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 10px;
+      background: rgba(3, 12, 16, 0.56);
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 10px;
+      transition: flex-basis .22s ease, background .22s ease, border-color .22s ease;
+    }
+
+    .library-panel.expanded {
+      flex: 1 1 auto;
+      border-color: rgba(74, 217, 202, 0.4);
+      background: rgba(4, 14, 19, 0.78);
+    }
+
+    .library-panel.collapsed {
+      flex: 0 0 104px;
+      overflow: hidden;
+    }
+
+    .library-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .library-title-btn {
+      appearance: none;
+      border: 0;
+      background: transparent;
+      color: #d0e5dd;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      letter-spacing: .01em;
+      cursor: pointer;
+    }
+
+    .library-title {
+      font-family: "Space Grotesk", sans-serif;
+      font-size: .95rem;
+    }
+
+    .library-count {
+      font-size: .75rem;
+      color: var(--muted);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 999px;
+      padding: 2px 7px;
+      background: rgba(8, 26, 31, 0.85);
+    }
+
+    .library-body {
+      display: grid;
+      min-height: 0;
+    }
+
+    .tree-list {
+      display: grid;
+      gap: 8px;
+      max-height: 100%;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .tree-node {
+      display: grid;
+      gap: 8px;
+    }
+
+    .tree-meta {
+      font-size: .8rem;
+      color: var(--muted);
+    }
+
+    .tree-episodes {
+      display: grid;
+      gap: 6px;
+      margin-left: 12px;
+      border-left: 2px solid rgba(255, 255, 255, 0.12);
+      padding-left: 8px;
+    }
+
+    .tree-episode-row {
+      cursor: default;
+    }
+
+    .muted-inline {
+      color: var(--muted);
+      font-size: .78rem;
+    }
+
+    .item.watched {
+      border-color: rgba(74, 217, 202, 0.85);
+      box-shadow: inset 0 0 0 1px rgba(74, 217, 202, 0.4);
+    }
+
+    .item.selected-subitem {
+      border-color: rgba(255, 166, 63, 0.88);
+    }
+
+    .library-panel.collapsed .library-body,
+    .library-panel.collapsed .tiny-btn.warn {
+      display: none;
+    }
+
+    .library-panel.collapsed .library-head {
+      justify-content: center;
+    }
+
+    .library-panel.collapsed .library-title-btn {
+      width: 100%;
+      display: grid;
+      justify-items: center;
+      gap: 10px;
+      text-align: center;
+    }
+
+    .library-panel.collapsed .library-title {
+      font-size: .9rem;
+      line-height: 1.1;
+    }
+
+    .entry-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+
+    .tiny-btn {
+      border-radius: 8px;
+      padding: 6px 8px;
+      font-size: .75rem;
+      line-height: 1.1;
+      background: rgba(21, 54, 65, 0.9);
+      color: #d8f4eb;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      font-weight: 600;
+    }
+
+    .tiny-btn.warn {
+      background: rgba(87, 31, 17, 0.88);
+      color: #ffe5db;
+      border-color: rgba(255, 131, 95, 0.52);
+    }
+
     .item {
       border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 10px;
@@ -254,6 +423,19 @@
       .result-list { max-height: 38vh; }
       .episode-list { max-height: 30vh; }
       .video-wrap, video { min-height: 240px; }
+      .library-radio {
+        flex-direction: column;
+        min-height: unset;
+      }
+      .library-panel.collapsed {
+        flex: 1 1 auto;
+      }
+      .library-panel.collapsed .library-head {
+        justify-content: space-between;
+      }
+      .library-panel.collapsed .library-title-btn {
+        display: inline-flex;
+      }
     }
   </style>
 </head>
@@ -276,11 +458,41 @@
             <option value="allanime">Only AllAnime</option>
             <option value="animefire">Only AnimeFire</option>
             <option value="flixhq">Only FlixHQ</option>
+            <option value="embedmovies">Only EmbedMovies</option>
           </select>
           <button id="searchBtn">Search</button>
         </div>
 
+        <div class="list-heading">Results</div>
         <div id="resultList" class="result-list"></div>
+
+        <div id="libraryRadio" class="library-radio">
+          <div id="historyPanel" class="library-panel expanded">
+            <div class="library-head">
+              <button id="historyToggleBtn" class="library-title-btn" type="button">
+                <span class="library-title">Histórico</span>
+                <span id="historyCount" class="library-count">0</span>
+              </button>
+              <button id="clearHistoryBtn" class="tiny-btn warn" type="button">Limpar</button>
+            </div>
+            <div class="library-body">
+              <div id="historyTree" class="tree-list"></div>
+            </div>
+          </div>
+
+          <div id="planPanel" class="library-panel collapsed">
+            <div class="library-head">
+              <button id="planToggleBtn" class="library-title-btn" type="button">
+                <span class="library-title">Minha lista</span>
+                <span id="planCount" class="library-count">0</span>
+              </button>
+              <button id="clearPlanBtn" class="tiny-btn warn" type="button">Limpar</button>
+            </div>
+            <div class="library-body">
+              <div id="planTree" class="tree-list"></div>
+            </div>
+          </div>
+        </div>
       </section>
 
       <section class="panel viewer">
@@ -296,10 +508,12 @@
           </select>
           <button id="playBtn" class="secondary">Play</button>
           <button id="downloadBtn">Download</button>
+          <button id="planBtn" type="button">Minha lista</button>
         </div>
 
         <div class="video-wrap">
           <video id="player" controls playsinline></video>
+          <iframe id="embedFrame" style="display:none; width:100%; min-height:320px; border:0;" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen></iframe>
         </div>
 
         <div class="info">
@@ -318,6 +532,9 @@
   </div>
 
   <script>
+    const HISTORY_KEY = 'goanime_web_history_v1';
+    const PLAN_KEY = 'goanime_web_plan_v1';
+
     const state = {
       selectedMediaId: null,
       selectedMedia: null,
@@ -325,6 +542,11 @@
       selectedEpisode: 1,
       selectedSeason: 1,
       hls: null,
+      historyRecords: [],
+      planItems: [],
+      selectedHistoryAnimeKey: '',
+      selectedPlanAnimeKey: '',
+      activeCollectionPanel: 'history',
     };
 
     const refs = {
@@ -339,12 +561,396 @@
       download: document.getElementById('downloadBtn'),
       episodeList: document.getElementById('episodeList'),
       player: document.getElementById('player'),
+      embedFrame: document.getElementById('embedFrame'),
       status: document.getElementById('status'),
       currentName: document.getElementById('currentName'),
       currentMeta: document.getElementById('currentMeta'),
       loadingOverlay: document.getElementById('loadingOverlay'),
       loadingMessage: document.getElementById('loadingMessage'),
+      planBtn: document.getElementById('planBtn'),
+      historyPanel: document.getElementById('historyPanel'),
+      planPanel: document.getElementById('planPanel'),
+      historyToggleBtn: document.getElementById('historyToggleBtn'),
+      planToggleBtn: document.getElementById('planToggleBtn'),
+      historyCount: document.getElementById('historyCount'),
+      planCount: document.getElementById('planCount'),
+      clearHistoryBtn: document.getElementById('clearHistoryBtn'),
+      clearPlanBtn: document.getElementById('clearPlanBtn'),
+      historyTree: document.getElementById('historyTree'),
+      planTree: document.getElementById('planTree'),
     };
+
+    function loadCollection(key, fallback) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return fallback;
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return fallback;
+        return parsed;
+      } catch {
+        return fallback;
+      }
+    }
+
+    function saveCollection(key, value) {
+      localStorage.setItem(key, JSON.stringify(value));
+    }
+
+    function animeKey(item) {
+      const source = String(item?.source || '').trim().toLowerCase();
+      const mediaURL = String(item?.media_url || '').trim();
+      return `${source}::${mediaURL}`;
+    }
+
+    function animeDisplayName(item) {
+      return (item?.anime_name || item?.name || 'Untitled media').trim();
+    }
+
+    function safeText(v) {
+      return String(v || '').replace(/[&<>"']/g, (ch) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+      }[ch]));
+    }
+
+    function shortTime(isoValue) {
+      const t = new Date(isoValue);
+      if (Number.isNaN(t.getTime())) return 'Unknown time';
+      return `${t.toLocaleDateString()} ${t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    }
+
+    function groupHistory() {
+      const grouped = new Map();
+      for (const rec of state.historyRecords) {
+        if (!rec?.anime_key) continue;
+        if (!grouped.has(rec.anime_key)) {
+          grouped.set(rec.anime_key, {
+            animeKey: rec.anime_key,
+            anime: rec.anime,
+            episodes: [],
+            latestAt: rec.at,
+          });
+        }
+        const group = grouped.get(rec.anime_key);
+        group.episodes.push(rec);
+        if (new Date(rec.at).getTime() > new Date(group.latestAt).getTime()) {
+          group.latestAt = rec.at;
+        }
+      }
+
+      return Array.from(grouped.values()).sort((a, b) => new Date(b.latestAt) - new Date(a.latestAt));
+    }
+
+    function groupedHistoryEpisodes(animeKeyValue) {
+      const episodes = new Map();
+      for (const rec of state.historyRecords) {
+        if (rec.anime_key !== animeKeyValue) continue;
+        const epKey = `${Number(rec.season) || 1}::${Number(rec.episode) || 1}`;
+        const prev = episodes.get(epKey);
+        if (!prev || new Date(rec.at) > new Date(prev.at)) {
+          episodes.set(epKey, rec);
+        }
+      }
+
+      return Array.from(episodes.values()).sort((a, b) => {
+        const byDate = new Date(b.at).getTime() - new Date(a.at).getTime();
+        if (byDate !== 0) return byDate;
+
+        const bySeason = (Number(b.season) || 1) - (Number(a.season) || 1);
+        if (bySeason !== 0) return bySeason;
+
+        return (Number(b.episode) || 1) - (Number(a.episode) || 1);
+      });
+    }
+
+    function watchedEpisodeSetForSelectedAnime() {
+      if (!state.selectedMedia) return new Set();
+      const key = animeKey(state.selectedMedia);
+      const watched = new Set();
+      for (const rec of state.historyRecords) {
+        if (rec.anime_key !== key) continue;
+        watched.add(Number(rec.episode));
+      }
+      return watched;
+    }
+
+    function setActiveCollectionPanel(panelName) {
+      state.activeCollectionPanel = panelName === 'plan' ? 'plan' : 'history';
+      const historyExpanded = state.activeCollectionPanel === 'history';
+
+      refs.historyPanel.classList.toggle('expanded', historyExpanded);
+      refs.historyPanel.classList.toggle('collapsed', !historyExpanded);
+      refs.planPanel.classList.toggle('expanded', !historyExpanded);
+      refs.planPanel.classList.toggle('collapsed', historyExpanded);
+    }
+
+    function renderHistoryPanels() {
+      const grouped = groupHistory();
+      refs.historyCount.textContent = String(grouped.length);
+      refs.historyTree.innerHTML = '';
+
+      if (grouped.length === 0) {
+        refs.historyTree.innerHTML = '<div class="muted-inline">Sem histórico ainda.</div>';
+        return;
+      }
+
+      if (state.selectedHistoryAnimeKey && !grouped.some((g) => g.animeKey === state.selectedHistoryAnimeKey)) {
+        state.selectedHistoryAnimeKey = '';
+      }
+
+      for (const entry of grouped) {
+        const node = document.createElement('article');
+        node.className = 'tree-node';
+
+        const isExpanded = state.selectedHistoryAnimeKey === entry.animeKey;
+
+        const card = document.createElement('div');
+        card.className = `item ${isExpanded ? 'selected-subitem' : ''}`.trim();
+        card.innerHTML = `
+          <div class="title">${safeText(animeDisplayName(entry.anime))}</div>
+          <div class="tree-meta">Ultima atividade: ${safeText(shortTime(entry.latestAt))}</div>
+        `;
+        card.onclick = () => {
+          state.selectedHistoryAnimeKey = isExpanded ? '' : entry.animeKey;
+          renderHistoryPanels();
+        };
+
+        const actions = document.createElement('div');
+        actions.className = 'entry-actions';
+
+        const openBtn = document.createElement('button');
+        openBtn.className = 'tiny-btn';
+        openBtn.type = 'button';
+        openBtn.textContent = 'Abrir lista';
+        openBtn.onclick = async (event) => {
+          event.stopPropagation();
+          setActiveCollectionPanel('history');
+          await openMediaFromStoredAnime(entry.anime);
+        };
+
+        actions.appendChild(openBtn);
+        card.appendChild(actions);
+        node.appendChild(card);
+
+        if (isExpanded) {
+          const episodes = groupedHistoryEpisodes(entry.animeKey);
+          const episodeList = document.createElement('div');
+          episodeList.className = 'tree-episodes';
+
+          if (episodes.length === 0) {
+            episodeList.innerHTML = '<div class="muted-inline">Sem episodios registrados para este anime.</div>';
+          } else {
+            for (const ep of episodes) {
+              const row = document.createElement('div');
+              row.className = 'item tree-episode-row';
+              row.innerHTML = `
+                <div class="title">Temporada ${Number(ep.season) || 1} - Episodio ${Number(ep.episode) || 1}</div>
+                <div class="tree-meta">Ultima acao: ${safeText(ep.action || 'play')}</div>
+                <div class="tree-meta">${safeText(shortTime(ep.at))}</div>
+              `;
+
+              const epActions = document.createElement('div');
+              epActions.className = 'entry-actions';
+
+              const openEpisodeBtn = document.createElement('button');
+              openEpisodeBtn.className = 'tiny-btn';
+              openEpisodeBtn.type = 'button';
+              openEpisodeBtn.textContent = 'Abrir episodio';
+              openEpisodeBtn.onclick = async () => {
+                setActiveCollectionPanel('history');
+                await openMediaFromStoredAnime(ep.anime, Number(ep.episode) || 1, Number(ep.season) || 1);
+              };
+
+              epActions.appendChild(openEpisodeBtn);
+              row.appendChild(epActions);
+              episodeList.appendChild(row);
+            }
+          }
+
+          node.appendChild(episodeList);
+        }
+
+        refs.historyTree.appendChild(node);
+      }
+    }
+
+    function renderPlanPanels() {
+      refs.planCount.textContent = String(state.planItems.length);
+      refs.planTree.innerHTML = '';
+
+      if (state.planItems.length === 0) {
+        refs.planTree.innerHTML = '<div class="muted-inline">Nenhum anime na sua lista.</div>';
+        return;
+      }
+
+      const sortedPlans = [...state.planItems].sort((a, b) => new Date(b.added_at) - new Date(a.added_at));
+
+      for (const plan of sortedPlans) {
+        const node = document.createElement('article');
+        node.className = 'tree-node';
+
+        const card = document.createElement('div');
+        card.className = 'item';
+        card.innerHTML = `
+          <div class="title">${safeText(animeDisplayName(plan.anime))}</div>
+        `;
+
+        const actions = document.createElement('div');
+        actions.className = 'entry-actions';
+
+        const openBtn = document.createElement('button');
+        openBtn.className = 'tiny-btn';
+        openBtn.type = 'button';
+        openBtn.textContent = 'Abrir lista';
+        openBtn.onclick = async () => {
+          setActiveCollectionPanel('plan');
+          await openMediaFromStoredAnime(plan.anime);
+        };
+
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'tiny-btn warn';
+        removeBtn.type = 'button';
+        removeBtn.textContent = 'Remover';
+        removeBtn.onclick = () => {
+          state.planItems = state.planItems.filter((x) => x.anime_key !== plan.anime_key);
+          saveCollection(PLAN_KEY, state.planItems);
+          renderPlanPanels();
+        };
+
+        actions.appendChild(openBtn);
+        actions.appendChild(removeBtn);
+        card.appendChild(actions);
+        node.appendChild(card);
+
+        refs.planTree.appendChild(node);
+      }
+    }
+
+    function normalizeAnimeForStorage(item) {
+      return {
+        anime_name: animeDisplayName(item),
+        name: String(item?.name || ''),
+        source: String(item?.source || ''),
+        image_url: String(item?.image_url || ''),
+        media_type: String(item?.media_type || 'anime'),
+        year: String(item?.year || ''),
+        language: String(item?.language || ''),
+        media_url: String(item?.media_url || ''),
+        imdb_id: String(item?.imdb_id || ''),
+      };
+    }
+
+    function recordHistory(action) {
+      if (!state.selectedMedia) return;
+
+      const anime = normalizeAnimeForStorage(state.selectedMedia);
+      const key = animeKey(anime);
+      const entry = {
+        anime_key: key,
+        anime,
+        episode: Number(state.selectedEpisode || 1),
+        season: Number(refs.seasonSelect.value || state.selectedSeason || 1),
+        action,
+        at: new Date().toISOString(),
+        list_url: anime.media_url,
+      };
+
+      state.historyRecords.push(entry);
+      if (state.historyRecords.length > 1000) {
+        state.historyRecords = state.historyRecords.slice(state.historyRecords.length - 1000);
+      }
+
+      saveCollection(HISTORY_KEY, state.historyRecords);
+      renderHistoryPanels();
+      refreshEpisodeWatchedStyle();
+    }
+
+    function addPlanCurrentAnime() {
+      if (!state.selectedMediaId || !state.selectedMedia) {
+        setStatus('Select a media item first.', 'error');
+        return;
+      }
+
+      const anime = normalizeAnimeForStorage(state.selectedMedia);
+      const key = animeKey(anime);
+      const currentSeason = Number(refs.seasonSelect.value || 1);
+      const episodeSnapshot = state.episodes
+        .map((x) => ({
+          season: currentSeason,
+          episode: Number(x.number),
+        }))
+        .filter((x) => x.episode > 0);
+
+      const existing = state.planItems.find((x) => x.anime_key === key);
+      if (existing) {
+        existing.anime = anime;
+        existing.episodes = episodeSnapshot;
+        existing.updated_at = new Date().toISOString();
+      } else {
+        state.planItems.push({
+          anime_key: key,
+          anime,
+          episodes: episodeSnapshot,
+          added_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+      }
+
+      saveCollection(PLAN_KEY, state.planItems);
+      state.selectedPlanAnimeKey = key;
+      setActiveCollectionPanel('plan');
+      renderPlanPanels();
+      setStatus(`${animeDisplayName(anime)} adicionado a Minha lista.`, 'ok');
+    }
+
+    async function openMediaFromStoredAnime(anime, episodeNum = null, seasonNum = 1) {
+      const params = new URLSearchParams({
+        media_url: String(anime?.media_url || ''),
+        source: String(anime?.source || ''),
+        name: String(anime?.name || anime?.anime_name || ''),
+        image_url: String(anime?.image_url || ''),
+        media_type: String(anime?.media_type || 'anime'),
+        year: String(anime?.year || ''),
+        imdb_id: String(anime?.imdb_id || ''),
+      });
+
+      if (!params.get('media_url')) {
+        setStatus('Cannot open this item: media_url is missing.', 'error');
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/media/resolve?${params.toString()}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'failed to resolve media');
+        if (!data.item?.id) throw new Error('invalid resolve response');
+
+        await selectMedia(data.item, null);
+
+        if (episodeNum !== null && !Number.isNaN(Number(episodeNum))) {
+          const wanted = Number(episodeNum);
+          const seasonWanted = Number(seasonNum || 1);
+          if (!refs.seasonSelect.disabled && refs.seasonSelect.value !== String(seasonWanted)) {
+            refs.seasonSelect.value = String(seasonWanted);
+            await loadEpisodes();
+          }
+
+          const match = state.episodes.find((ep) => Number(ep.number) === wanted);
+          if (match) {
+            state.selectedEpisode = wanted;
+            refs.episodeSelect.value = String(wanted);
+            highlightEpisode(wanted);
+          }
+        }
+
+        setStatus(`Loaded ${animeDisplayName(anime)} from saved list.`, 'ok');
+      } catch (err) {
+        setStatus(`Open saved anime error: ${err.message}`, 'error');
+      }
+    }
 
     function setStatus(text, type = '') {
       refs.status.className = `status ${type}`.trim();
@@ -369,6 +975,10 @@
       refs.player.pause();
       refs.player.removeAttribute('src');
       refs.player.load();
+      refs.player.style.display = 'block';
+
+      refs.embedFrame.style.display = 'none';
+      refs.embedFrame.removeAttribute('src');
 
       state.selectedMediaId = null;
       state.selectedMedia = null;
@@ -416,7 +1026,7 @@
           const card = document.createElement('button');
           card.className = 'item';
           const animeName = (item.anime_name || item.name || 'Untitled media').trim();
-          card.innerHTML = `<div class="title">${animeName}</div><div class="meta">${sourceLabel(item)}</div>`;
+          card.innerHTML = `<div class="title">${safeText(animeName)}</div><div class="meta">${safeText(sourceLabel(item))}</div>`;
           card.onclick = () => selectMedia(item, card);
           refs.resultList.appendChild(card);
         }
@@ -429,7 +1039,7 @@
       }
     }
 
-    async function selectMedia(item, cardEl) {
+    async function selectMedia(item, cardEl = null) {
       if (state.hls) {
         state.hls.destroy();
         state.hls = null;
@@ -437,6 +1047,10 @@
       refs.player.pause();
       refs.player.removeAttribute('src');
       refs.player.load();
+      refs.player.style.display = 'block';
+
+      refs.embedFrame.style.display = 'none';
+      refs.embedFrame.removeAttribute('src');
 
       state.selectedMediaId = item.id;
       state.selectedMedia = item;
@@ -444,9 +1058,19 @@
       refs.currentMeta.textContent = sourceLabel(item);
 
       Array.from(refs.resultList.children).forEach(el => el.classList.remove('active'));
-      cardEl.classList.add('active');
+      if (cardEl) cardEl.classList.add('active');
 
       await loadEpisodes();
+    }
+
+    function refreshEpisodeWatchedStyle() {
+      const watched = watchedEpisodeSetForSelectedAnime();
+      const nodes = Array.from(refs.episodeList.children);
+      nodes.forEach((el, idx) => {
+        const ep = state.episodes[idx];
+        if (!ep) return;
+        el.classList.toggle('watched', watched.has(Number(ep.number)));
+      });
     }
 
     async function loadEpisodes() {
@@ -490,7 +1114,7 @@
         for (const ep of state.episodes) {
           const epBtn = document.createElement('button');
           epBtn.className = 'item';
-          epBtn.innerHTML = `<div class="title">Episode ${ep.number}</div><div class="meta">${ep.label}</div>`;
+          epBtn.innerHTML = `<div class="title">Episode ${safeText(ep.number)}</div><div class="meta">${safeText(ep.label)}</div>`;
           epBtn.onclick = () => {
             state.selectedEpisode = ep.number;
             refs.episodeSelect.value = String(ep.number);
@@ -507,6 +1131,7 @@
         state.selectedEpisode = state.episodes[0].number;
         refs.episodeSelect.value = String(state.selectedEpisode);
         highlightEpisode(state.selectedEpisode);
+        refreshEpisodeWatchedStyle();
         setStatus(`Loaded ${state.episodes.length} episode(s).`, 'ok');
       } catch (err) {
         setStatus(`Episodes error: ${err.message}`, 'error');
@@ -522,11 +1147,26 @@
       });
     }
 
-    function applyPlayerURL(url) {
+    function applyPlayerURL(url, isEmbed = false) {
       if (state.hls) {
         state.hls.destroy();
         state.hls = null;
       }
+
+      if (isEmbed) {
+        refs.player.pause();
+        refs.player.removeAttribute('src');
+        refs.player.load();
+        refs.player.style.display = 'none';
+
+        refs.embedFrame.style.display = 'block';
+        refs.embedFrame.src = url;
+        return;
+      }
+
+      refs.embedFrame.style.display = 'none';
+      refs.embedFrame.removeAttribute('src');
+      refs.player.style.display = 'block';
 
       const video = refs.player;
       const isM3U8 = url.includes('.m3u8') || url.includes('mpegurl');
@@ -551,16 +1191,21 @@
       const quality = refs.quality.value;
 
       setStatus('Resolving stream URL...');
+      recordHistory('play');
       try {
         const url = `/api/media/${state.selectedMediaId}/stream?episode=${state.selectedEpisode}&season=${season}&quality=${encodeURIComponent(quality)}`;
         const res = await fetch(url);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'failed to resolve stream');
 
-        applyPlayerURL(data.proxy_url || data.stream_url);
+        const isEmbed = !!data.is_embed;
+        applyPlayerURL(data.proxy_url || data.stream_url, isEmbed);
 
-        const video = refs.player;
-        await video.play().catch(() => undefined);
+        if (!isEmbed) {
+          const video = refs.player;
+          await video.play().catch(() => undefined);
+        }
+
         setStatus(`Playing episode ${state.selectedEpisode}.`, 'ok');
       } catch (err) {
         setStatus(`Play error: ${err.message}`, 'error');
@@ -577,8 +1222,34 @@
       const season = Number(refs.seasonSelect.value || 1);
       const quality = refs.quality.value;
       const url = `/api/media/${state.selectedMediaId}/download?episode=${state.selectedEpisode}&season=${season}&quality=${encodeURIComponent(quality)}`;
+      recordHistory('download');
       window.open(url, '_blank');
       setStatus(`Download started for episode ${state.selectedEpisode}.`, 'ok');
+    }
+
+    function clearHistory() {
+      state.historyRecords = [];
+      state.selectedHistoryAnimeKey = '';
+      saveCollection(HISTORY_KEY, state.historyRecords);
+      renderHistoryPanels();
+      refreshEpisodeWatchedStyle();
+      setStatus('Histórico limpo.', 'ok');
+    }
+
+    function clearPlan() {
+      state.planItems = [];
+      state.selectedPlanAnimeKey = '';
+      saveCollection(PLAN_KEY, state.planItems);
+      renderPlanPanels();
+      setStatus('Minha lista limpa.', 'ok');
+    }
+
+    function initSavedLists() {
+      state.historyRecords = loadCollection(HISTORY_KEY, []);
+      state.planItems = loadCollection(PLAN_KEY, []);
+      setActiveCollectionPanel('history');
+      renderHistoryPanels();
+      renderPlanPanels();
     }
 
     refs.search.addEventListener('click', doSearch);
@@ -594,6 +1265,13 @@
 
     refs.play.addEventListener('click', playSelected);
     refs.download.addEventListener('click', downloadSelected);
+    refs.planBtn.addEventListener('click', addPlanCurrentAnime);
+    refs.historyToggleBtn.addEventListener('click', () => setActiveCollectionPanel('history'));
+    refs.planToggleBtn.addEventListener('click', () => setActiveCollectionPanel('plan'));
+    refs.clearHistoryBtn.addEventListener('click', clearHistory);
+    refs.clearPlanBtn.addEventListener('click', clearPlan);
+
+    initSavedLists();
   </script>
 </body>
 </html>
